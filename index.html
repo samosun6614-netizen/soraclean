@@ -11,7 +11,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--dark-bg); color: #f1f5f9; line-height: 1.6; }
         nav { position: fixed; top: 0; width: 100%; padding: 20px 5%; background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 24px; font-weight: 800; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .nav-links a { color: #94a3b8; text-decoration: none; margin-left: 20px; font-size: 14px; font-weight: 600; transition: 0.3s; }
+        .nav-links a { color: #94a3b8; text-decoration: none; margin-left: 20px; font-size: 14px; font-weight: 600; }
         .container { max-width: 1000px; margin: auto; padding: 120px 20px 60px; }
         .hero { text-align: center; margin-bottom: 80px; }
         .hero h1 { font-size: clamp(32px, 7vw, 60px); font-weight: 800; margin-bottom: 20px; letter-spacing: -1px; }
@@ -64,7 +64,6 @@
             </div>
         </div>
     </div>
-
     <section id="faq">
         <h2>Frequently Asked Questions</h2>
         <div class="faq-grid">
@@ -79,8 +78,7 @@
 </footer>
 
 <script>
-const API_KEY = 'dfd93e3d-6068-4f27-85f3-bbd0d2ed12ce';
-const API_URL = 'https://sora.thirdme.com/api/v1/remove-watermark';
+const BACKEND = 'https://soraclean-api.onrender.com';
 
 function setMsg(color, text) {
     const m = document.getElementById('msg');
@@ -104,41 +102,31 @@ async function validateAndProcess() {
     btn.disabled = true;
     btnText.innerHTML = '<span class="loader"></span> Processing...';
     resultArea.style.display = 'none';
-    setMsg('#6366f1', '⚡ Removing watermark...');
+    setMsg('#6366f1', '⚡ Removing watermark... (may take 30s on first use)');
 
     try {
-        const res = await fetch(API_URL, {
+        const res = await fetch(`${BACKEND}/api/clean`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
             signal: AbortSignal.timeout(60000)
         });
 
         const data = await res.json();
-        console.log('API Response:', data);
 
-        if (data.status === 'success' && data.data) {
-            const cleanUrl = data.data.links?.mp4NoWatermark || data.data.url;
-            if (cleanUrl) {
-                setMsg('#22c55e', '✅ Watermark Successfully Removed!');
-                resultArea.style.display = 'block';
-                videoPlayer.src = cleanUrl;
-                downloadLink.href = cleanUrl;
-            } else {
-                setMsg('#ef4444', '❌ Could not get clean video URL.');
-            }
+        if (data.success && data.clean_url) {
+            setMsg('#22c55e', '✅ Watermark Successfully Removed!');
+            resultArea.style.display = 'block';
+            videoPlayer.src = data.clean_url;
+            downloadLink.href = data.clean_url;
         } else {
-            setMsg('#ef4444', '❌ ' + (data.message || data.error || 'Processing failed. Try again.'));
+            setMsg('#ef4444', '❌ ' + (data.error || 'Processing failed. Try again.'));
         }
     } catch (err) {
-        console.error(err);
         if (err.name === 'TimeoutError') {
-            setMsg('#ef4444', '❌ Request timed out. Try again.');
+            setMsg('#ef4444', '❌ Server waking up. Please try again in 30 seconds.');
         } else {
-            setMsg('#ef4444', '❌ Network error. Check connection and try again.');
+            setMsg('#ef4444', '❌ Cannot reach server. Try again.');
         }
     }
 
