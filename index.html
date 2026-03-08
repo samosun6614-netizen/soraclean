@@ -293,22 +293,7 @@
     </div>
   </section>
 
-  <!-- API BANNER -->
-  <div class="api-banner">
-    <div class="api-box">
-      <div class="api-box-top">
-        <span>⚙️</span>
-        <div class="api-box-title">Backend API URL</div>
-      </div>
-      <div class="api-box-sub">Enter your deployed backend URL (from Render.com). See setup guide below ↓</div>
-      <div class="api-input-row">
-        <input class="api-input" id="apiInput" type="url" placeholder="https://your-soraclean-api.onrender.com">
-        <button class="btn-save-api" onclick="saveAndTest()">Save & Test</button>
-      </div>
-      <div class="api-status checking" id="apiStatus">○ Not configured</div>
-    </div>
-  </div>
-
+  <div style="display:none"><input id="apiInput"><div id="apiStatus"></div></div>
   <!-- MAIN CARD -->
   <div class="card-wrap">
     <div class="main-card">
@@ -342,4 +327,16 @@
         </div>
 
         <!-- SUCCESS -->
-        <div class="result-s
+        <div class="result-state" id="resultState">
+          <div class="result-header">
+            <div>
+              <div class="result-title" id="videoTitle">Sora Video</div>
+              <div class="result-prompt" id="videoPrompt"></div>
+            </div>
+            <div class="success-badge">✓ Watermark Removed</div>
+          </div>
+          <div class="video-box">
+            <video id="resultVideo" controls playsinline preload="metadata"></video>
+          </div>
+          <div class="action-row">
+            <a class="btn-dl" id="dlBtn" href="#" target="_blank" download="sorac
