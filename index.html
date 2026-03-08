@@ -79,59 +79,13 @@
 </footer>
 
 <script>
-function extractShareId(url) {
-    const m = url.match(/\/p\/(s_[a-zA-Z0-9_-]+)/);
-    return m ? m[1] : null;
-}
-
-function findVideoUrl(obj, depth) {
-    if (depth > 10) return null;
-    if (typeof obj === 'string') {
-        if (obj.startsWith('http') && /\.(mp4|webm|mov)/i.test(obj)) return obj;
-    }
-    if (Array.isArray(obj)) {
-        for (const i of obj) { const r = findVideoUrl(i, depth+1); if (r) return r; }
-    }
-    if (obj && typeof obj === 'object') {
-        for (const k of ['video_url','url','download_url','source_url','media_url','file_url']) {
-            if (obj[k]) { const r = findVideoUrl(obj[k], depth+1); if (r) return r; }
-        }
-        for (const v of Object.values(obj)) { const r = findVideoUrl(v, depth+1); if (r) return r; }
-    }
-    return null;
-}
+const API_KEY = 'dfd93e3d-6068-4f27-85f3-bbd0d2ed12ce';
+const API_URL = 'https://sora.thirdme.com/api/v1/remove-watermark';
 
 function setMsg(color, text) {
     const m = document.getElementById('msg');
     m.style.color = color;
     m.innerHTML = text;
-}
-
-async function tryFetch(url) {
-    // Try 1: direct fetch
-    try {
-        const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (r.ok) return await r.json();
-    } catch(e) {}
-
-    // Try 2: allorigins proxy
-    try {
-        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        const r = await fetch(proxy);
-        if (r.ok) {
-            const d = await r.json();
-            if (d.contents) return JSON.parse(d.contents);
-        }
-    } catch(e) {}
-
-    // Try 3: corsproxy.io
-    try {
-        const proxy2 = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-        const r = await fetch(proxy2);
-        if (r.ok) return await r.json();
-    } catch(e) {}
-
-    return null;
 }
 
 async function validateAndProcess() {
@@ -147,42 +101,45 @@ async function validateAndProcess() {
         return;
     }
 
-    const shareId = extractShareId(url);
-    if (!shareId) {
-        setMsg('#ef4444', '❌ Could not find share ID in URL.');
-        return;
-    }
-
     btn.disabled = true;
     btnText.innerHTML = '<span class="loader"></span> Processing...';
     resultArea.style.display = 'none';
+    setMsg('#6366f1', '⚡ Removing watermark...');
 
-    const endpoints = [
-        `https://sora.chatgpt.com/p/${shareId}.json`,
-        `https://sora.chatgpt.com/backend-api/share/${shareId}`,
-    ];
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({ url }),
+            signal: AbortSignal.timeout(60000)
+        });
 
-    let cleanUrl = null;
+        const data = await res.json();
+        console.log('API Response:', data);
 
-    for (const endpoint of endpoints) {
-        setMsg('#6366f1', `⚡ Fetching video data...`);
-        const data = await tryFetch(endpoint);
-        if (data) {
-            const rawUrl = findVideoUrl(data, 0);
-            if (rawUrl) {
-                cleanUrl = rawUrl.replace(/_wm(\.(mp4|webm|mov))/i, '$1');
-                break;
+        if (data.status === 'success' && data.data) {
+            const cleanUrl = data.data.links?.mp4NoWatermark || data.data.url;
+            if (cleanUrl) {
+                setMsg('#22c55e', '✅ Watermark Successfully Removed!');
+                resultArea.style.display = 'block';
+                videoPlayer.src = cleanUrl;
+                downloadLink.href = cleanUrl;
+            } else {
+                setMsg('#ef4444', '❌ Could not get clean video URL.');
             }
+        } else {
+            setMsg('#ef4444', '❌ ' + (data.message || data.error || 'Processing failed. Try again.'));
         }
-    }
-
-    if (cleanUrl) {
-        setMsg('#22c55e', '✅ Watermark Successfully Removed!');
-        resultArea.style.display = 'block';
-        videoPlayer.src = cleanUrl;
-        downloadLink.href = cleanUrl;
-    } else {
-        setMsg('#ef4444', '❌ Could not process. Make sure the Sora link is public and try again.');
+    } catch (err) {
+        console.error(err);
+        if (err.name === 'TimeoutError') {
+            setMsg('#ef4444', '❌ Request timed out. Try again.');
+        } else {
+            setMsg('#ef4444', '❌ Network error. Check connection and try again.');
+        }
     }
 
     btn.disabled = false;
@@ -194,5 +151,4 @@ document.getElementById('soraUrl').addEventListener('keydown', e => {
 });
 </script>
 </body>
-                         </html>
-  
+</html>
